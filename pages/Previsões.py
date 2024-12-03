@@ -12,7 +12,7 @@ import yfinance as yf
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 # Configurações do Streamlit
-st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
+##st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
 
 # Função para calcular WMAPE
 @st.cache_data
