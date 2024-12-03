@@ -28,7 +28,7 @@ st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
 
 # Carregar e preparar os dados (sem cache)
 def load_data():
-    df = pd.read_csv('https://raw.githubusercontent.com/ISQRS00/dashboard_tc4/main/barril.csv', sep=';')
+    df = pd.read_csv('https://github.com/ISQRS00/dashboard_ptroleo/blob/main/novoss', sep=';')
     df.drop(columns=['Unnamed: 2'], inplace=True)
     df.rename(columns={'Data': 'data', 'Preço - petróleo bruto - Brent (FOB) - US$ - Energy Information Administration (EIA) - EIA366_PBRENT366': 'realizado'}, inplace=True)
     df['data'] = pd.to_datetime(df['data'])
