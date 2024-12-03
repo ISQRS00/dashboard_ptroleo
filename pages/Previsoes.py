@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 from datetime import timedelta
 import statsmodels.api as sm
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import joblib
+import os
 
 # Configurações do Streamlit
 st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
@@ -24,12 +26,17 @@ def load_data():
     df['realizado'] = df['realizado'].ffill()  # Preencher valores ausentes
     return df
 
-# Função para treinar o modelo ETS (não armazenar em cache de forma permanente)
-def train_ets_model(train_data, season_length=252):
-    model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
+# Função para treinar o modelo ETS e salvar em um arquivo joblib
+def train_ets_model(train_data, season_length=252, model_filename='ets_model.joblib'):
+    # Verifica se o modelo já foi salvo
+    if os.path.exists(model_filename):
+        model_ets = joblib.load(model_filename)  # Carrega o modelo salvo
+    else:
+        model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
+        joblib.dump(model_ets, model_filename)  # Salva o modelo treinado em um arquivo
     return model_ets
 
-# Função para previsão com o modelo ETS (não armazenar em cache de forma permanente)
+# Função para previsão com o modelo ETS
 def forecast_ets(train, valid, _model_ets):
     forecast_ets = _model_ets.forecast(len(valid))
     forecast_dates = pd.date_range(start=train['data'].iloc[-1] + pd.Timedelta(days=1), periods=len(valid), freq='D')
@@ -78,7 +85,7 @@ if st.button("Gerar Previsão"):
     progress.progress(100)
     
     # Treinar o modelo
-    model_ets = train_ets_model(train)
+    model_ets = train_ets_model(train)  # Isso carregará ou treinará e salvará o modelo
     
     # Prever com o modelo ETS
     ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets = forecast_ets(train, valid, model_ets)
@@ -102,5 +109,3 @@ if st.button("Gerar Previsão"):
         autosize=True
     )
     st.plotly_chart(fig_ets, use_container_width=True)
-
-
