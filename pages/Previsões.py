@@ -32,7 +32,7 @@ def load_data():
 
 # Função para treinar o modelo ETS
 @st.cache_data
-def train_ets_model(train_data, season_length=252):
+def train_ets_model(train_data, season_length=60):
     model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
     return model_ets
 
