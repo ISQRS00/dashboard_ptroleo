@@ -26,7 +26,15 @@ def load_data():
 # Função para treinar o modelo ETS (sem cache)
 def train_ets_model(train_data, season_length=252):
     st.write("Treinando o modelo ETS... Isso pode levar algum tempo.")
-    model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
+    # Imprimir o tamanho do conjunto de dados para depuração
+    st.write(f"Tamanho do conjunto de treino para ETS: {len(train_data)}")
+    
+    # Limitar a quantidade de dados para testes (reduzido para 2000 dados por exemplo)
+    train_data_limited = train_data.tail(2000)
+    st.write(f"Tamanho do conjunto de treino limitado: {len(train_data_limited)}")
+    
+    # Treinando o modelo
+    model_ets = sm.tsa.ExponentialSmoothing(train_data_limited['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
     return model_ets
 
 # Função para previsão com o modelo ETS
