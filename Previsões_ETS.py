@@ -2,8 +2,6 @@ import streamlit as st
 import requests
 from PIL import Image
 from io import BytesIO
-import os
-import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -20,17 +18,15 @@ def wmape(y_true, y_pred):
     return np.abs(y_true - y_pred).sum() / np.abs(y_true).sum()
 
 # Função para treinar o modelo ETS (treinamento otimizado)
-@st.cache_data
 def train_ets_model(train_data):
     season_length = 252  # Sazonalidade anual
-    model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit(optimized=True)
+    model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
     return model_ets
 
 # Configurações do Streamlit
 st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
 
-# Carregar e preparar os dados (com cache)
-@st.cache_data
+# Carregar e preparar os dados (sem cache)
 def load_data():
     df = pd.read_csv('https://raw.githubusercontent.com/ISQRS00/dashboard_tc4/main/barril.csv', sep=';')
     df.drop(columns=['Unnamed: 2'], inplace=True)
@@ -40,7 +36,7 @@ def load_data():
     df['realizado'] = df['realizado'].ffill()  # Preencher valores ausentes
     return df
 
-# Carregar dados uma vez com cache
+# Carregar dados uma vez
 df_barril_petroleo = load_data()
 
 # Explicação sobre o corte de dados
@@ -70,13 +66,14 @@ cut_date = df_barril_petroleo['data'].max() - timedelta(days=dias_corte)
 train = df_barril_petroleo.loc[df_barril_petroleo['data'] < cut_date]
 valid = df_barril_petroleo.loc[df_barril_petroleo['data'] >= cut_date]
 
-# Treinando o modelo ETS com dados de treino
+# **Tirei a criação do modelo ETS dentro da função de previsão**
+# Agora o modelo ETS será treinado uma vez e reutilizado
+
+# Treinando o modelo ETS com dados de treino (apenas uma vez)
 model_ets = train_ets_model(train)
 
-# Função para previsão com o modelo ETS
-def forecast_ets(train, valid):
-    season_length = 252  # Sazonalidade anual
-    model_ets = sm.tsa.ExponentialSmoothing(train['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
+# Função para previsão com o modelo ETS (agora reutiliza o modelo treinado)
+def forecast_ets(train, valid, model_ets):
     forecast_ets = model_ets.forecast(len(valid))
     forecast_dates = pd.date_range(start=train['data'].iloc[-1] + pd.Timedelta(days=1), periods=len(valid), freq='D')
     ets_df = pd.DataFrame({'data': forecast_dates, 'previsão': forecast_ets})
@@ -90,7 +87,7 @@ def forecast_ets(train, valid):
     return ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets
 
 # Exibição das métricas de desempenho
-ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets = forecast_ets(train, valid)
+ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets = forecast_ets(train, valid, model_ets)
 
 st.subheader('Métricas de Desempenho do Modelo ETS')
 st.write(f'WMAPE: {wmape_ets:.2%}')
