@@ -12,7 +12,7 @@ import yfinance as yf
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 # Configurações do Streamlit
-##st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
+
 
 # Função para calcular WMAPE
 @st.cache_data
@@ -63,7 +63,7 @@ Escolha o número de dias para o corte e veja como o modelo se comporta para dif
 """)
 
 # Input para o número de dias para corte
-dias_corte = st.number_input('Selecione o número de dias para o corte entre 7 e 90:', min_value=7, max_value=90, value=7)
+dias_corte = st.number_input('Selecione o número de dias para o corte entre 7 e 90:', min_value=7, max_value=90)
 
 # Calcular a data de corte com base no número de dias
 cut_date = df_barril_petroleo['data'].max() - timedelta(days=dias_corte)
