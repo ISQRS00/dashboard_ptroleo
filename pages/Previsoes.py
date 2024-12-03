@@ -13,7 +13,8 @@ st.set_page_config(page_title="Deploy | Tech Challenge 4 | FIAP", layout='wide')
 def wmape(y_true, y_pred):
     return np.abs(y_true - y_pred).sum() / np.abs(y_true).sum()
 
-# Carregar e preparar os dados (sem cache de dados)
+# Carregar e preparar os dados (com cache)
+@st.cache_data
 def load_data():
     df = pd.read_csv('https://raw.githubusercontent.com/ISQRS00/dashboard_tc4/main/barril.csv', sep=';')
     df.drop(columns=['Unnamed: 2'], inplace=True)
@@ -23,23 +24,14 @@ def load_data():
     df['realizado'] = df['realizado'].ffill()  # Preencher valores ausentes
     return df
 
-# Função para treinar o modelo ETS (sem cache)
+# Função para treinar o modelo ETS (não armazenar em cache de forma permanente)
 def train_ets_model(train_data, season_length=252):
-    st.write("Treinando o modelo ETS... Isso pode levar algum tempo.")
-    # Imprimir o tamanho do conjunto de dados para depuração
-    st.write(f"Tamanho do conjunto de treino para ETS: {len(train_data)}")
-    
-    # Limitar a quantidade de dados para testes (reduzido para 2000 dados por exemplo)
-    train_data_limited = train_data.tail(2000)
-    st.write(f"Tamanho do conjunto de treino limitado: {len(train_data_limited)}")
-    
-    # Treinando o modelo
-    model_ets = sm.tsa.ExponentialSmoothing(train_data_limited['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
+    model_ets = sm.tsa.ExponentialSmoothing(train_data['realizado'], seasonal='mul', seasonal_periods=season_length).fit()
     return model_ets
 
-# Função para previsão com o modelo ETS
-def forecast_ets(train, valid, model_ets):  # Desabilitado cache
-    forecast_ets = model_ets.forecast(len(valid))
+# Função para previsão com o modelo ETS (não armazenar em cache de forma permanente)
+def forecast_ets(train, valid, _model_ets):
+    forecast_ets = _model_ets.forecast(len(valid))
     forecast_dates = pd.date_range(start=train['data'].iloc[-1] + pd.Timedelta(days=1), periods=len(valid), freq='D')
     ets_df = pd.DataFrame({'data': forecast_dates, 'previsão': forecast_ets})
     ets_df = ets_df.merge(valid, on=['data'], how='inner')
@@ -77,27 +69,19 @@ st.write(f"A data de corte é: {cut_date}")
 st.write(f"Tamanho do conjunto de treino: {len(train)}")
 st.write(f"Tamanho do conjunto de validação: {len(valid)}")
 
-# Barra de progresso para o treinamento e previsão
+# Criar uma barra de progresso
 progress = st.progress(0)
 
-# Evitar que a função seja chamada repetidamente
+# Treinar o modelo ETS
 if st.button("Gerar Previsão"):
-    with st.spinner("Treinando o modelo e gerando previsões..."):
-        # Barra de progresso para treinamento e previsão
-        for i in range(30):
-            progress.progress(i + 1)
-        
-        # Treinar o modelo ETS (sem cache)
-        model_ets = train_ets_model(train)
-        
-        for i in range(30, 60):
-            progress.progress(i + 1)
-        
-        # Prever com o modelo ETS
-        ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets = forecast_ets(train, valid, model_ets)
-        
-        for i in range(60, 100):
-            progress.progress(i + 1)
+    # Atualizar barra de progresso para indicar que o treinamento está em andamento
+    progress.progress(100)
+    
+    # Treinar o modelo
+    model_ets = train_ets_model(train)
+    
+    # Prever com o modelo ETS
+    ets_df, wmape_ets, MAE_ets, MSE_ets, R2_ets = forecast_ets(train, valid, model_ets)
 
     st.subheader('Métricas de Desempenho do Modelo ETS')
     st.write(f'WMAPE: {wmape_ets:.2%}')
@@ -119,12 +103,4 @@ if st.button("Gerar Previsão"):
     )
     st.plotly_chart(fig_ets, use_container_width=True)
 
-    # Opção de Download dos Resultados
-    st.subheader('Baixar Resultados')
-    csv = ets_df.to_csv(index=False)
-    st.download_button(
-        label="Baixar Previsões ETS",
-        data=csv,
-        file_name="previsoes_ets.csv",
-        mime="text/csv"
-    )
+
